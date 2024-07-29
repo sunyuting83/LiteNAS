@@ -1,0 +1,4 @@
+port: "13008"
+SECRET_KEY: fOlDTny86gcFjk5Accyy2TOtF0aTxM6X
+AdminPWD: qNQAGbQDPBvN
+FormMemory: 64
