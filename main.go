@@ -1,12 +1,11 @@
 package main
 
 import (
-	// BadgerDB "LiteNAS/badger"
+	Badger "LiteNAS/badger"
 	orm "LiteNAS/database"
 	"LiteNAS/router"
 	"LiteNAS/utils"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -22,7 +21,7 @@ func main() {
 
 	confYaml, err := utils.CheckConfig(CurrentPath)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		time.Sleep(time.Duration(10) * time.Second)
 		os.Exit(0)
 	}
@@ -31,14 +30,14 @@ func main() {
 	// gin.SetMode(gin.ReleaseMode)
 	gin.SetMode(gin.DebugMode)
 	defer orm.Eloquent.Close()
-	// defer BadgerDB.BadgerDB.Close()
+	defer Badger.BadgerDB.Close()
 	app := router.InitRouter(confYaml.SECRET_KEY, CurrentPath, confYaml.FormMemory)
 
 	srv := &http.Server{
 		Addr:    strings.Join([]string{":", confYaml.Port}, ""),
 		Handler: app,
 	}
-	fmt.Printf("listen port %s\n", srv.Addr)
+	log.Printf("listen port %s\n", srv.Addr)
 	go func() {
 		// 服务连接
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
