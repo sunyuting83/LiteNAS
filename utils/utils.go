@@ -21,6 +21,12 @@ type Config struct {
 	FormMemory int64  `yaml:"FormMemory"`
 }
 
+type UsersConfig struct {
+	Path  string `json:"path"`
+	Read  bool   `json:"read"`
+	Write bool   `json:"write"`
+}
+
 // GetCurrentPath Get Current Path
 func GetCurrentPath() (string, error) {
 	path, err := os.Executable()

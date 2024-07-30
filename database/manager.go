@@ -1,7 +1,5 @@
 package database
 
-import "fmt"
-
 type Manager struct {
 	ID        uint   `gorm:"primaryKey"`
 	UserName  string `gorm:"index:idx_manager_user_pass_status;index:idx_manager_username"`
@@ -88,7 +86,7 @@ func (manager *Manager) ResetPassword(username string) (manage Manager, err erro
 	if err = sqlDB.First(&manage, "user_name = ?", username).Error; err != nil {
 		return
 	}
-	fmt.Println(manager)
+	// fmt.Println(manager)
 	if err = sqlDB.Model(&manage).Updates(&manager).Error; err != nil {
 		return
 	}

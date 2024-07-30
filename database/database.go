@@ -45,10 +45,12 @@ func InitDB(pwd string) {
 
 	if m := sqlDB.First(&manager); m.Error != nil {
 		if m.Error.Error() == "record not found" {
+			jsonData := `{"path":"/mnt","read":true,"write":true}`
 			u := Manager{
 				UserName:  "admin",
 				Password:  pwd,
 				NewStatus: 0,
+				UserPath:  jsonData,
 			}
 			sqlDB.Create(&u)
 		}
