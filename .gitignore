@@ -2,3 +2,6 @@ db/
 Cache/
 server
 .vscode/
+go.mod
+go.sum
+*.log
