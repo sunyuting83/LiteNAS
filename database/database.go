@@ -51,6 +51,7 @@ func InitDB(pwd string) {
 				Password:  pwd,
 				NewStatus: 0,
 				UserPath:  jsonData,
+				IsAdmin:   1,
 			}
 			sqlDB.Create(&u)
 		}

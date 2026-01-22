@@ -6,6 +6,7 @@ type Manager struct {
 	Password  string `gorm:"index:idx_manager_user_pass_status"`
 	UserPath  string
 	NewStatus int   `gorm:"index:idx_manager_user_pass_status"`
+	IsAdmin   int   `gorm:"default:0"`
 	CreatedAt int64 `gorm:"autoUpdateTime:milli"`
 	UpdatedAt int64 `gorm:"autoUpdateTime:milli"`
 }
