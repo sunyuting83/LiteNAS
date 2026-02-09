@@ -4,56 +4,75 @@ import (
 	"LiteNAS/utils"
 	"database/sql"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var (
-	Eloquent *sql.DB
-	sqlDB    *gorm.DB
+	DB    *gorm.DB
+	sqlDB *sql.DB // 内部保存 sql.DB 句柄用于关闭
 )
 
-// InitDB init db
-func InitDB(pwd string) {
-	CurrentPath, _ := utils.GetCurrentPath()
-	dbPath := strings.Join([]string{CurrentPath, "db"}, "/")
-	if !utils.IsExist(dbPath) {
-		os.MkdirAll(dbPath, 0755)
+// InitDB 初始化数据库
+func InitDB(defaultAdminPwd string) {
+	// 1. 使用 filepath 替代 strings.Join 保证跨平台路径正确
+	currentPath, _ := utils.GetCurrentPath()
+	dbDir := filepath.Join(currentPath, "db")
+
+	if _, err := os.Stat(dbDir); os.IsNotExist(err) {
+		_ = os.MkdirAll(dbDir, 0755)
 	}
-	dbName := strings.Join([]string{"database", "sqlite3"}, ".")
-	dbFile := strings.Join([]string{dbPath, dbName}, "/")
-	sqlDB, _ = gorm.Open(sqlite.Open(dbFile), &gorm.Config{})
 
-	Eloquent, _ = sqlDB.DB()
-	Eloquent.SetMaxIdleConns(10)
+	dbFile := filepath.Join(dbDir, "nas_core.db")
 
-	// SetMaxOpenConns 设置打开数据库连接的最大数量。
-	Eloquent.SetMaxOpenConns(100)
+	// 2. 开启 GORM 配置优化
+	var err error
+	DB, err = gorm.Open(sqlite.Open(dbFile), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent), // 生产环境建议关闭详细日志
+	})
+	if err != nil {
+		panic("连接数据库失败: " + err.Error())
+	}
 
-	// SetConnMaxLifetime 设置了连接可复用的最大时间。
-	Eloquent.SetConnMaxLifetime(time.Hour)
-	sqlDB.AutoMigrate(
-		&Manager{},
-	)
+	// 3. 配置连接池
+	sqlDB, _ := DB.DB()
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	var (
-		manager *Manager
-	)
+	// 4. 自动迁移
+	_ = DB.AutoMigrate(&Manager{})
 
-	if m := sqlDB.First(&manager); m.Error != nil {
-		if m.Error.Error() == "record not found" {
-			jsonData := `{"path":"/mnt","read":true,"write":true}`
-			u := Manager{
-				UserName:  "admin",
-				Password:  pwd,
-				NewStatus: 0,
-				UserPath:  jsonData,
-				IsAdmin:   1,
-			}
-			sqlDB.Create(&u)
+	// 5. 初始化默认管理员
+	initAdmin(defaultAdminPwd)
+}
+
+func initAdmin(pwd string) {
+	var count int64
+	DB.Model(&Manager{}).Count(&count)
+	if count == 0 {
+		// 初始权限配置 (JSON 格式)
+		// 预留给主程序逻辑层解析
+		defaultConfig := `[{"path":"/mnt/default","label":"根目录","read":true,"write":true}]`
+
+		admin := Manager{
+			UserName: "admin",
+			Password: pwd, // 注意：这里的 pwd 应在传入前由 logic 层完成哈希
+			Status:   0,
+			UserPath: defaultConfig,
+			IsAdmin:  true,
 		}
+		DB.Create(&admin)
+	}
+}
+
+// CloseDB 供 main 函数 defer 调用
+func CloseDB() {
+	if sqlDB != nil {
+		sqlDB.Close()
 	}
 }
