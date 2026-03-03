@@ -1,12 +1,11 @@
 package middleware
 
 import (
-	BadgerDB "LiteNAS/badger" // 请确保路径正确
-
-	// 假设 Message 结构体在此
+	BadgerDB "LiteNAS/badger"
 	"LiteNAS/utils"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -90,4 +89,51 @@ func validateAndGetInfo(s, a string) (*CacheToken, error) {
 	}
 
 	return &info, nil
+}
+
+// AuthMiddleware 身份验证中间件
+// secretKey 用于后续如果切换到 JWT 时的签名验证
+func AuthMiddleware(secretKey string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 1. 获取 Token
+		// 优先从 Header 获取 (Authorization: Bearer <token>)，其次从 Query 获取
+		token := c.GetHeader("Authorization")
+		if token == "" {
+			token = c.Query("token")
+		}
+
+		// 处理 Bearer 前缀
+		token = strings.TrimPrefix(token, "Bearer ")
+
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"status": 1, "message": "未登录，请先登录"})
+			c.Abort()
+			return
+		}
+
+		// 2. 从 BadgerDB 校验 Token 有效性
+		// 假设登录时我们将 token -> user_info(json) 存入了 Badger
+		val, err := BadgerDB.Get([]byte("session:" + token))
+		if err != nil || val == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"status": 1, "message": "登录已过期或无效"})
+			c.Abort()
+			return
+		}
+
+		// 3. 解析用户信息 (简单的示范：假设存的是 UserID 的字符串)
+		// 实际上你可以在这里解析出完整的 UserInfo 结构体
+		userIDStr := string(val)
+
+		// 4. 将用户信息注入 Context，供后续 FilePolicy 中间件使用
+		// 注意：这里存的是 uint，确保和数据库 ID 类型一致
+		userID := utils.StringToUint(userIDStr)
+
+		// 存入上下文供后续 FilePolicy 使用
+		c.Set("user_id", userID)
+
+		// 5. 也可以直接查一次数据库或缓存，把 IsAdmin 状态带上
+		// 减少 FilePolicy 里重复查询数据库的次数
+
+		c.Next()
+	}
 }

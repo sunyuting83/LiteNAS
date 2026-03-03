@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -169,4 +170,21 @@ func pkcs7UnPadding(data []byte) ([]byte, error) {
 		return nil, errors.New("解密填充错误")
 	}
 	return data[:(length - unPadding)], nil
+}
+
+// StringToUint 将字符串转换为 uint
+// 如果转换失败，返回 0
+func StringToUint(s string) uint {
+	// 1. 使用 strconv.ParseUint，指定 10 进制，64 位长度
+	// 第二个参数 10 表示十进制，第三个参数 0 表示根据系统位数自动选择（32或64）
+	u64, err := strconv.ParseUint(s, 10, 0)
+	if err != nil {
+		return 0
+	}
+	return uint(u64)
+}
+
+// UintToString 将 uint 转换为字符串（反向转换，方便存入 Badger）
+func UintToString(u uint) string {
+	return strconv.FormatUint(uint64(u), 10)
 }
