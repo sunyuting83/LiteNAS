@@ -58,6 +58,8 @@ func InitRouter(secretKey string, currentPath string, formMemory int64) *gin.Eng
 			storageApi.POST("/umount", Storage.UmountPartition) // 卸载
 			storageApi.POST("/format", Storage.FormatDisk)      // 格式化
 			storageApi.POST("/init", Storage.InitRawDisk)       // 初始化新盘
+			storageApi.POST("/lvm/create", Storage.CreateLVM)
+			storageApi.GET("/lvm/status", Storage.GetLVMStatus)
 		}
 
 	}
