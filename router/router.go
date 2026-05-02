@@ -53,7 +53,7 @@ func InitRouter(secretKey string, currentPath string, formMemory int64) *gin.Eng
 
 		storageApi := private.Group("/storage")
 		{
-			storageApi.GET("/list", Storage.GetDiskUsage)       // 查看磁盘状态
+			storageApi.GET("/list", Storage.GetDiskLayout)      // 查看磁盘状态
 			storageApi.POST("/mount", Storage.MountPartition)   // 挂载
 			storageApi.POST("/umount", Storage.UmountPartition) // 卸载
 			storageApi.POST("/format", Storage.FormatDisk)      // 格式化
