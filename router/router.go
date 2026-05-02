@@ -60,6 +60,10 @@ func InitRouter(secretKey string, currentPath string, formMemory int64) *gin.Eng
 			storageApi.POST("/init", Storage.InitRawDisk)       // 初始化新盘
 			storageApi.POST("/lvm/create", Storage.CreateLVM)
 			storageApi.GET("/lvm/status", Storage.GetLVMStatus)
+			storageApi.POST("/lvm/extend", Storage.ExtendLVM)
+			storageApi.POST("/lvm/remove", Storage.RemoveLV)
+			storageApi.GET("/lvm/health", Storage.CheckLVMHealth)
+			storageApi.GET("/lvm/smart", Storage.GetDiskSmartInfo)
 		}
 
 	}
