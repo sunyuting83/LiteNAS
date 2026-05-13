@@ -20,8 +20,9 @@ type FileItem struct {
 }
 
 // GetList 读取目录接口
+// GetList 读取目录接口
 func GetList(c *gin.Context) {
-	// 1. 获取中间件校验后的物理路径 (例如: /mnt/sda1/videos)
+	// 1. 获取中间件校验后的物理路径
 	realPath := c.GetString("validated_path")
 
 	// 系统根目录常量，用于计算相对路径
@@ -39,16 +40,24 @@ func GetList(c *gin.Context) {
 
 	for _, entry := range entries {
 		name := entry.Name()
+
+		// --- 修复点：过滤逻辑 ---
+		// 1. 过滤隐藏文件 (以 . 开头)
 		if name[0] == '.' {
 			continue
-		} // 过滤隐藏文件
+		}
+		// 2. 过滤 Linux 系统分区残留目录
+		if name == "lost+found" {
+			continue
+		}
+		// ---------------------
 
 		info, err := entry.Info()
 		if err != nil {
 			continue
 		}
 
-		// 计算相对路径（去掉 /mnt 前缀），方便前端展示和下次请求
+		// 计算相对路径（去掉 /mnt 前缀）
 		relPath, _ := filepath.Rel(dataRoot, filepath.Join(realPath, name))
 
 		item := FileItem{
