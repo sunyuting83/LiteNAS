@@ -16,7 +16,7 @@ type LsblkOutput struct {
 type DiskDevice struct {
 	Name     string      `json:"name"`     // 设备名
 	Model    string      `json:"model"`    // 型号
-	Size     int64       `json:"size"`     // 总大小
+	Size     string      `json:"size"`     // 总大小
 	PTType   string      `json:"pttype"`   // 分区表类型 (gpt/dos)
 	PTUUID   string      `json:"ptuuid"`   // 磁盘标识符
 	Type     string      `json:"type"`     // 类型 (disk)
@@ -26,7 +26,7 @@ type DiskDevice struct {
 // Partition 对应分区 (如 /dev/sda1)
 type Partition struct {
 	Name         string `json:"name"`         // 分区名
-	Size         int64  `json:"size"`         // 分区大小
+	Size         string `json:"size"`         // 分区大小
 	FSType       string `json:"fstype"`       // 类型 (ext4/ntfs)
 	UUID         string `json:"uuid"`         // UUID
 	PartTypeName string `json:"parttypename"` // 分区类型名 (Linux 文件系统)
@@ -38,7 +38,7 @@ func GetDiskLayout(c *gin.Context) {
 	// 核心命令：lsblk -J (JSON格式) -p (完整路径) -o (指定字段)
 	// 字段说明：name(路径), size(大小), model(型号), pttype(标签类型), ptuuid(标识符), fstype(文件系统), uuid(UUID), parttypename(类型名)
 	args := []string{
-		"-J", "-p", "-b", // -b 是为了拿到准确的 Byte 数，如果你想直接要 GiB 可以去掉 -b
+		"-J", "-p", // -b 是为了拿到准确的 Byte 数，如果你想直接要 GiB 可以去掉 -b
 		"-o", "NAME,SIZE,MODEL,PTTYPE,PTUUID,FSTYPE,UUID,PARTTYPENAME,TYPE,MOUNTPOINT",
 	}
 
