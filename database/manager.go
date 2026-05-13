@@ -115,10 +115,7 @@ func (manager *Manager) UpStatusAdmin(status int) {
 
 // makePage make page
 func makePage(p, Limit int) int {
-	p = p - 1
-	if p <= 0 {
-		p = 0
-	}
+	p = max(p-1, 0)
 	page := p * Limit
 	return page
 }

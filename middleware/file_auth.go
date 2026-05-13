@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"LiteNAS/database"
+	sqlDB "LiteNAS/database"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
@@ -59,8 +60,8 @@ func FilePolicy() gin.HandlerFunc {
 		}
 
 		// 5. 获取用户数据库权限
-		var user database.Manager
-		if err := database.DB.Select("user_path", "is_admin").First(&user, uid).Error; err != nil {
+		var user *database.Manager
+		if err := sqlDB.DB.First(&user, "id = ?", uid).Error; err != nil {
 			c.JSON(http.StatusForbidden, gin.H{"status": 1, "message": "用户数据异常"})
 			c.Abort()
 			return

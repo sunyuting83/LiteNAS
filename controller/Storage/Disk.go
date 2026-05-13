@@ -16,7 +16,7 @@ type LsblkOutput struct {
 type DiskDevice struct {
 	Name     string      `json:"name"`     // 设备名
 	Model    string      `json:"model"`    // 型号
-	Size     string      `json:"size"`     // 总大小
+	Size     int64       `json:"size"`     // 总大小
 	PTType   string      `json:"pttype"`   // 分区表类型 (gpt/dos)
 	PTUUID   string      `json:"ptuuid"`   // 磁盘标识符
 	Type     string      `json:"type"`     // 类型 (disk)
@@ -26,7 +26,7 @@ type DiskDevice struct {
 // Partition 对应分区 (如 /dev/sda1)
 type Partition struct {
 	Name         string `json:"name"`         // 分区名
-	Size         string `json:"size"`         // 分区大小
+	Size         int64  `json:"size"`         // 分区大小
 	FSType       string `json:"fstype"`       // 类型 (ext4/ntfs)
 	UUID         string `json:"uuid"`         // UUID
 	PartTypeName string `json:"parttypename"` // 分区类型名 (Linux 文件系统)

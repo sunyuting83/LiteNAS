@@ -5,6 +5,7 @@ import (
 	"LiteNAS/utils"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -31,6 +32,7 @@ func AdminVerifyMiddleware() gin.HandlerFunc {
 			return
 		}
 		tokenStr := authHeader[7:]
+		fmt.Println(tokenStr)
 
 		// 2. 获取加密密钥 (增加保护)
 		secretRaw, exists := c.Get("secret_key")
@@ -92,17 +94,13 @@ func validateAndGetInfo(s, a string) (*CacheToken, error) {
 }
 
 // AuthMiddleware 身份验证中间件
-// secretKey 用于后续如果切换到 JWT 时的签名验证
 func AuthMiddleware(secretKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 1. 获取 Token
-		// 优先从 Header 获取 (Authorization: Bearer <token>)，其次从 Query 获取
 		token := c.GetHeader("Authorization")
 		if token == "" {
 			token = c.Query("token")
 		}
-
-		// 处理 Bearer 前缀
 		token = strings.TrimPrefix(token, "Bearer ")
 
 		if token == "" {
@@ -111,28 +109,40 @@ func AuthMiddleware(secretKey string) gin.HandlerFunc {
 			return
 		}
 
-		// 2. 从 BadgerDB 校验 Token 有效性
-		// 假设登录时我们将 token -> user_info(json) 存入了 Badger
-		val, err := BadgerDB.Get([]byte("session:" + token))
+		// 2. 解密 Token (因为 Login 发给前端的是 AES 加密后的结果)
+		// 必须先解密成 MD5 原文，才能去 Badger 匹配 Key
+		decryptedToken, err := utils.DecryptByAes(token, []byte(secretKey))
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"status": 1, "message": "无效的 Token 格式"})
+			c.Abort()
+			return
+		}
+		tokenRaw := string(decryptedToken)
+
+		// 3. 从 BadgerDB 校验 Token 有效性
+		// 注意：这里的 Key 必须和 Login 里的 "token:info:" + newToken 保持一致
+		tokenInfoKey := "token:info:" + tokenRaw
+		val, err := BadgerDB.Get([]byte(tokenInfoKey))
 		if err != nil || val == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"status": 1, "message": "登录已过期或无效"})
 			c.Abort()
 			return
 		}
 
-		// 3. 解析用户信息 (简单的示范：假设存的是 UserID 的字符串)
-		// 实际上你可以在这里解析出完整的 UserInfo 结构体
-		userIDStr := string(val)
+		// 4. 解析缓存的 JSON 数据 (Login 里存的是 CacheToken 结构体)
+		var cacheData struct {
+			UserID uint   `json:"user_id"`
+			Token  string `json:"token"`
+		}
+		if err := json.Unmarshal([]byte(val), &cacheData); err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"status": 1, "message": "会话数据解析失败"})
+			c.Abort()
+			return
+		}
 
-		// 4. 将用户信息注入 Context，供后续 FilePolicy 中间件使用
-		// 注意：这里存的是 uint，确保和数据库 ID 类型一致
-		userID := utils.StringToUint(userIDStr)
-
-		// 存入上下文供后续 FilePolicy 使用
-		c.Set("user_id", userID)
-
-		// 5. 也可以直接查一次数据库或缓存，把 IsAdmin 状态带上
-		// 减少 FilePolicy 里重复查询数据库的次数
+		// 5. 将用户信息注入 Context
+		// 存入 user_id 供后续业务逻辑使用
+		c.Set("user_id", cacheData.UserID)
 
 		c.Next()
 	}
